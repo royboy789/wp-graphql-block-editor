@@ -100,35 +100,32 @@ class EditorBlockInterface {
 		] );
 
 		// Register the EditorBlock Interface
-		register_graphql_interface_type( 'EditorBlock', [
-			'eagerlyLoadType' => true,
-			'description' => __( 'Blocks that can be edited to create content and layouts', 'wp-graphql-block-editor' ),
-			'fields'      => [
-				'name'                    => [
-					'type'        => 'String',
-					'description' => __( 'The name of the Block', 'wp-graphql-block-editor' ),
-				],
-				'blockEditorCategoryName' => [
-					'type'        => 'String',
-					'description' => __( 'The name of the category the Block belongs to', 'wp-graphql-block-editor' ),
-					'resolve'     => function( $block, $args, AppContext $context, ResolveInfo $info ) {
-						return isset( self::get_block( $block, $context )->category ) ? self::get_block( $block, $context )->category : null;
-					}
-				],
-				'isDynamic'               => [
-					'type'        => [ 'non_null' => 'Boolean' ],
-					'description' => __( 'Whether the block is Dynamic (server rendered)', 'wp-graphql-block-editor' ),
-					'resolve'     => function( $block, $args, AppContext $context, ResolveInfo $info ) {
-						return isset( self::get_block( $block, $context )->render_callback ) && ! empty( self::get_block( $block, $context )->render_callback );
-					},
-				],
-				'apiVersion'              => [
-					'type'        => 'Integer',
-					'description' => __( 'The API version of the Gutenberg Block', 'wp-graphql-block-editor' ),
-					'resolve'     => function( $block, $args, AppContext $context, ResolveInfo $info ) {
-						return isset( self::get_block( $block, $context )->api_version ) && absint( self::get_block( $block, $context )->api_version ) ? absint( self::get_block( $block, $context )->api_version ) : 2;
-					},
-				],
+		$editor_block_interface_fields = [
+			'name'                    => [
+				'type'        => 'String',
+				'description' => __( 'The name of the Block', 'wp-graphql-block-editor' ),
+			],
+			'blockEditorCategoryName' => [
+				'type'        => 'String',
+				'description' => __( 'The name of the category the Block belongs to', 'wp-graphql-block-editor' ),
+				'resolve'     => function( $block, $args, AppContext $context, ResolveInfo $info ) {
+					return isset( self::get_block( $block, $context )->category ) ? self::get_block( $block, $context )->category : null;
+				}
+			],
+			'isDynamic'               => [
+				'type'        => [ 'non_null' => 'Boolean' ],
+				'description' => __( 'Whether the block is Dynamic (server rendered)', 'wp-graphql-block-editor' ),
+				'resolve'     => function( $block, $args, AppContext $context, ResolveInfo $info ) {
+					return isset( self::get_block( $block, $context )->render_callback ) && ! empty( self::get_block( $block, $context )->render_callback );
+				},
+			],
+			'apiVersion'              => [
+				'type'        => 'Integer',
+				'description' => __( 'The API version of the Gutenberg Block', 'wp-graphql-block-editor' ),
+				'resolve'     => function( $block, $args, AppContext $context, ResolveInfo $info ) {
+					return isset( self::get_block( $block, $context )->api_version ) && absint( self::get_block( $block, $context )->api_version ) ? absint( self::get_block( $block, $context )->api_version ) : 2;
+				},
+			],
 //				'supports'                => [
 //					'type'        => 'EditorBlockSupports',
 //					'description' => __( 'Features supported by the block', 'wp-graphql-block-editor' ),
@@ -136,25 +133,40 @@ class EditorBlockInterface {
 //						return isset( $block['supports'] ) && is_array( $block['supports'] ) ? $block['supports'] : [];
 //					},
 //				],
-				'cssClassNames'           => [
-					'type'        => [ 'list_of' => 'String' ],
-					'description' => __( 'CSS Classnames to apply to the block', 'wp-graphql-block-editor' ),
-					'resolve'     => function( $block ) {
-						if ( isset( $block['attrs']['className'] ) ) {
-							return explode( ' ', $block['attrs']['className'] );
-						}
+			'cssClassNames'           => [
+				'type'        => [ 'list_of' => 'String' ],
+				'description' => __( 'CSS Classnames to apply to the block', 'wp-graphql-block-editor' ),
+				'resolve'     => function( $block ) {
+					if ( isset( $block['attrs']['className'] ) ) {
+						return explode( ' ', $block['attrs']['className'] );
+					}
 
-						return null;
-					}
-				],
-				'renderedHtml' => [
-					'type' => 'String',
-					'description' => __( 'The rendered HTML for the block', 'wp-graphql-block-editor' ),
-					'resolve' => function( $block ) {
-						return render_block( $block );
-					}
-				]
+					return null;
+				}
 			],
+			'renderedHtml' => [
+				'type' => 'String',
+				'description' => __( 'The rendered HTML for the block', 'wp-graphql-block-editor' ),
+				'resolve' => function( $block ) {
+					return render_block( $block );
+				}
+			],
+			'attributes' => [
+				'type' => 'String',
+				'description' => __( 'The rendered HTML for the block', 'wp-graphql-block-editor' ),
+				'resolve' => function( $block ) {
+					$attrs = wp_json_encode( $block['attrs'] );
+					return stripslashes( $attrs );
+				}
+			],
+		];
+		
+		$editor_block_interface_fields = apply_filters( 'graphql_editor_block_fields' , $editor_block_interface_fields, $block );
+		
+		register_graphql_interface_type( 'EditorBlock', [
+			'eagerlyLoadType' => true,
+			'description' => __( 'Blocks that can be edited to create content and layouts', 'wp-graphql-block-editor' ),
+			'fields'      => $editor_block_interface_fields,
 			'resolveType' => function( $block ) use ( $type_registry ) {
 
 				if ( empty( $block['blockName'] ) ) {
